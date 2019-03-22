@@ -1,0 +1,163 @@
+
+#include <Wire.h>
+// Include NewLiquidCrystal Library for I2C
+#include <LiquidCrystal_I2C.h>
+#include "CurieIMU.h"
+const int LevelNo = 5;
+int YELLOW = 9;
+int GREEN = 7;
+int RED = 5;
+int BUTTON = 3;   
+int RandoFail; 
+int RandoWin;
+int randosW[LevelNo];
+int randosF[LevelNo];
+int lastOrientation = - 1; // previous orientation (for comparison)
+int burgers = 0;
+int Hi = 0;
+const float easyZhi = 0.22;
+const float easyZlo = -0.4;
+const float woahLo = easyZlo + 0.1;
+const float woahHi = easyZhi - 0.07 ;
+
+
+ 
+// Define LCD pinout
+const int  en = 2, rw = 1, rs = 0, d4 = 4, d5 = 5, d6 = 6, d7 = 7, bl = 3;
+ 
+// Define I2C Address - change if reqiuired
+const int i2c_addr = 0x27;
+ 
+LiquidCrystal_I2C lcd(i2c_addr, en, rw, rs, d4, d5, d6, d7, bl, LCD_POSITIVE);
+ 
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); // initialize Serial communication
+  
+  lcd.begin(16,2);
+  // initialize device
+  CurieIMU.begin();
+
+  pinMode(YELLOW, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+  pinMode(RED, OUTPUT);
+  pinMode(BUTTON, INPUT);
+  
+  // Set the accelerometer range to 2G
+  CurieIMU.setAccelerometerRange(2);
+
+    
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("THE");
+  delay(400);
+  lcd.setCursor(4,0);
+  lcd.print("GOTCHA");
+  delay(200);
+  lcd.setCursor(11,0);
+  lcd.print("BACK");
+  delay(800);
+  lcd.setCursor(0,1);
+  lcd.print("HAS");
+  delay(200);
+  lcd.setCursor(4,1);
+  lcd.print("GOT");
+  delay(400);
+  lcd.setCursor(8,1);
+  lcd.print("YA");
+  delay(200);
+  lcd.setCursor(11,1);
+  lcd.print("BACK");
+  delay(3000);
+}
+
+void loop() {
+  float ax, ay, az;   //scaled accelerometer values
+
+  // read accelerometer measurements from device, scaled to the configured range
+  CurieIMU.readAccelerometerScaled(ax, ay, az);
+
+  // display tab-separated accelerometer x/y/z values
+  Serial.print("a:\t");
+  Serial.print(ax);
+  Serial.print("\t");
+  Serial.print(ay);
+  Serial.print("\t");
+  Serial.print(az);
+  Serial.println();
+
+  
+  
+  
+  while (digitalRead(BUTTON)==HIGH) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("High Score:");
+    lcd.setCursor(0,1);
+    lcd.print(Hi);
+    delay(200);
+    burgers++;
+    
+  }
+
+  if (az < woahHi && az > woahLo) {  
+    digitalWrite(GREEN, HIGH);
+    digitalWrite(RED,  LOW);
+    digitalWrite(YELLOW, LOW);
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print(burgers);
+    burgers+= 1;
+    delay(200);
+    lcd.clear(); 
+     
+
+ 
+    
+
+  } else if (az > easyZhi or az < easyZlo) {
+      digitalWrite (RED, HIGH);
+      digitalWrite (GREEN, LOW);
+      digitalWrite(YELLOW, LOW);
+        if (burgers == 0 && digitalRead(RED)==HIGH){
+          lcd.clear();
+          lcd.setCursor(0,0);
+          lcd.print("     Sit up     ");
+          lcd.setCursor(0,1);
+          lcd.print("    straight!   ");
+          delay(200);
+        }
+      else {
+        if (burgers > Hi){
+          Hi = burgers;
+        }
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Your score:");
+        lcd.setCursor(0,1);
+        lcd.print(burgers);
+        delay(3000);
+        burgers = 0;
+      }
+        
+
+  } else if ((az < easyZhi && az > woahHi) or (az > easyZlo && az <woahLo) ) {
+      digitalWrite (RED, LOW);
+      digitalWrite (GREEN, LOW);
+      digitalWrite (YELLOW, HIGH);
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Straighten that");
+      lcd.setCursor(0,1);
+      lcd.print("back!");
+      delay(200);
+      
+  } else {
+      Serial.println("panic");
+  }
+
+}
+
+
+//sda purp, scl white, gnd blue, 5v grey
